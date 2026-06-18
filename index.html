@@ -303,6 +303,55 @@
             font-size: 0.75rem;
             color: #999;
         }
+
+        /* Botão modo passo-a-passo */
+        #btnModo {
+            background: #7B1FA2;
+            color: #fff;
+        }
+
+        #btnModo:hover {
+            background: #6A1B9A;
+        }
+
+        #btnModo.ativo {
+            background: #AB47BC;
+        }
+
+        /* Botão próximo passo */
+        #btnProximo {
+            background: #0288D1;
+            color: #fff;
+            display: none;
+        }
+
+        #btnProximo:hover {
+            background: #0277BD;
+        }
+
+        #btnProximo.visivel {
+            display: inline-block;
+        }
+
+        /* Rodapé */
+        footer {
+            background: #2D2D2D;
+            border-top: 1px solid #444;
+            padding: 8px 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        footer p {
+            font-size: 0.7rem;
+            color: #888;
+            line-height: 1.5;
+        }
+
+        footer p:first-child {
+            color: #aaa;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -319,6 +368,8 @@
                 <input type="range" id="speedSlider" min="1" max="10" value="5">
             </div>
 
+            <button id="btnModo">🖱 Passo a Passo</button>
+            <button id="btnProximo">▶ Próximo</button>
             <button id="btnReiniciar">⟳ Reiniciar</button>
             <button id="btnPausar">⏸ Pausar</button>
         </div>
@@ -378,6 +429,12 @@
         </div>
     </div>
 
+    <!-- Rodapé com créditos -->
+    <footer>
+        <p>© 2025 Estrutura de Dados - Fractal de Sierpinski - Prof. William Corrêa Mendes</p>
+        <p>Material educacional desenvolvido para fins acadêmicos. É permitida a reprodução, adaptação e distribuição, desde que seja dado o devido crédito ao autor.</p>
+    </footer>
+
     <script>
         // ==========================================
         // Fractal de Sierpinski — Demonstração Interativa
@@ -392,6 +449,8 @@
         const speedSlider = document.getElementById('speedSlider');
         const btnReiniciar = document.getElementById('btnReiniciar');
         const btnPausar = document.getElementById('btnPausar');
+        const btnModo = document.getElementById('btnModo');
+        const btnProximo = document.getElementById('btnProximo');
         const stateBadge = document.getElementById('stateBadge');
         const activeCalls = document.getElementById('activeCalls');
         const totalCalls = document.getElementById('totalCalls');
@@ -484,6 +543,11 @@
         let maxProfundidade = 3;
         let chamadasAtivas = 0;
 
+        // Modo passo-a-passo: aguarda clique do usuário para avançar
+        let modoPassoAPasso = false;
+        let aguardandoClique = false;
+        let resolverClique = null; // resolve da Promise quando o usuário clica
+
         // Inicializar painéis de código
         function inicializarCodigo() {
             const containerVG = document.getElementById('codeVisualG');
@@ -537,6 +601,11 @@
                 stateBadge.className = 'state-badge recursive';
             }
 
+            // Adicionar dica de passo-a-passo na mensagem
+            if (modoPassoAPasso && animando) {
+                mensagem += ' — <em style="color:#AB47BC">clique "Próximo" ou ESPAÇO</em>';
+            }
+
             eduMessage.innerHTML = mensagem;
             activeCalls.textContent = chamadasAtivas;
             totalCalls.textContent = contadorTotal;
@@ -557,8 +626,20 @@
         }
 
         // Promessa de espera com suporte a pausa e cancelamento
+        // No modo passo-a-passo, aguarda clique do usuário
         function esperar(ms) {
             return new Promise(resolve => {
+                if (cancelado) { resolve(); return; }
+
+                // Modo passo-a-passo: parar e aguardar clique
+                if (modoPassoAPasso) {
+                    aguardandoClique = true;
+                    btnProximo.classList.add('visivel');
+                    resolverClique = resolve;
+                    return;
+                }
+
+                // Modo automático: delay normal com pausa
                 const verificar = () => {
                     if (cancelado) {
                         resolve();
@@ -572,6 +653,17 @@
                 };
                 verificar();
             });
+        }
+
+        // Avançar um passo (chamado pelo botão "Próximo")
+        function avancarPasso() {
+            if (aguardandoClique && resolverClique) {
+                aguardandoClique = false;
+                btnProximo.classList.remove('visivel');
+                const fn = resolverClique;
+                resolverClique = null;
+                fn();
+            }
         }
 
         // Redimensionar canvas
@@ -708,6 +800,9 @@
             contadorTotal = 0;
             chamadasAtivas = 0;
             profundidadeAtual = 0;
+            aguardandoClique = false;
+            resolverClique = null;
+            btnProximo.classList.remove('visivel');
             btnPausar.textContent = '⏸ Pausar';
 
             // Redimensionar e limpar canvas
@@ -761,6 +856,31 @@
 
             if (pausado) {
                 eduMessage.innerHTML += ' — <em>PAUSADO</em>';
+            }
+        });
+
+        // Alternar modo passo-a-passo / automático
+        btnModo.addEventListener('click', () => {
+            modoPassoAPasso = !modoPassoAPasso;
+            btnModo.classList.toggle('ativo', modoPassoAPasso);
+            btnModo.textContent = modoPassoAPasso ? '🖱 Passo a Passo ✓' : '🖱 Passo a Passo';
+
+            // Se desativar durante uma espera, liberar
+            if (!modoPassoAPasso && aguardandoClique) {
+                avancarPasso();
+            }
+        });
+
+        // Botão para avançar ao próximo passo
+        btnProximo.addEventListener('click', () => {
+            avancarPasso();
+        });
+
+        // Atalho: barra de espaço também avança
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && aguardandoClique) {
+                e.preventDefault();
+                avancarPasso();
             }
         });
 
