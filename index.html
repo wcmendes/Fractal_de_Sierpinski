@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal de Sierpinski — Recursividade Interativa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Cabeçalho */
+        header {
+            background: #2D2D2D;
+            padding: 8px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #444;
+            flex-shrink: 0;
+        }
+
+        header h1 {
+            font-size: 1.1rem;
+            color: #fff;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .controls label {
+            font-size: 0.85rem;
+            color: #bbb;
+        }
+
+        .controls input[type="range"] {
+            width: 120px;
+            cursor: pointer;
+        }
+
+        .controls button {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        #btnReiniciar {
+            background: #4CAF50;
+            color: #fff;
+        }
+
+        #btnReiniciar:hover {
+            background: #45a049;
+        }
+
+        #btnPausar {
+            background: #FF9800;
+            color: #fff;
+        }
+
+        #btnPausar:hover {
+            background: #e68a00;
+        }
+
+        #depthDisplay {
+            color: #fff;
+            font-weight: bold;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        /* Layout principal */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Canvas à esquerda */
+        .canvas-section {
+            width: 60%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #444;
+        }
+
+        canvas {
+            flex: 1;
+            background: #1E1E1E;
+            display: block;
+        }
+
+        /* Painéis de código à direita */
+        .code-section {
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .code-panels {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .code-column {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+            overflow: hidden;
+        }
+
+        .code-column:last-child {
+            border-right: none;
+        }
+
+        .lang-label {
+            padding: 6px 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .lang-visualg .lang-label {
+            background: #1F4E79;
+            color: #fff;
+        }
+
+        .lang-python .lang-label {
+            background: #375623;
+            color: #fff;
+        }
+
+        .lang-javascript .lang-label {
+            background: #E65100;
+            color: #fff;
+        }
+
+        .code-content {
+            flex: 1;
+            background: #2D2D2D;
+            padding: 8px 6px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.7rem;
+            line-height: 1.5;
+        }
+
+        .code-line {
+            padding: 1px 4px;
+            border-radius: 2px;
+            white-space: pre;
+            transition: background 0.2s;
+        }
+
+        .code-line.active {
+            background: #4a4a00;
+            border-left: 3px solid #FFD700;
+        }
+
+        .code-line .keyword {
+            color: #569CD6;
+        }
+
+        .code-line .comment {
+            color: #6A9955;
+        }
+
+        .code-line .function-name {
+            color: #DCDCAA;
+        }
+
+        .code-line .string {
+            color: #CE9178;
+        }
+
+        /* Indicador de estado */
+        .state-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 12px;
+            background: #252525;
+            border-top: 1px solid #444;
+            flex-shrink: 0;
+        }
+
+        .state-badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .state-badge.base-case {
+            background: #2e7d32;
+            color: #fff;
+        }
+
+        .state-badge.recursive {
+            background: #1565c0;
+            color: #fff;
+        }
+
+        .call-counters {
+            font-size: 0.75rem;
+            color: #aaa;
+            margin-left: auto;
+        }
+
+        .call-counters span {
+            color: #fff;
+            font-weight: bold;
+        }
+
+        /* Painel educacional inferior */
+        .edu-panel {
+            background: #252525;
+            padding: 10px 20px;
+            border-top: 1px solid #555;
+            flex-shrink: 0;
+        }
+
+        .edu-message {
+            font-size: 0.85rem;
+            color: #e0e0e0;
+            margin-bottom: 6px;
+            min-height: 1.2em;
+        }
+
+        .edu-message em {
+            color: #FFD700;
+            font-style: normal;
+            font-weight: 600;
+        }
+
+        .stack-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stack-bar-label {
+            font-size: 0.75rem;
+            color: #999;
+            white-space: nowrap;
+        }
+
+        .stack-bar {
+            flex: 1;
+            height: 8px;
+            background: #444;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .stack-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #FF9800, #f44336);
+            border-radius: 4px;
+            transition: width 0.3s;
+            width: 0%;
+        }
+
+        .stack-depth-value {
+            font-size: 0.75rem;
+            color: #fff;
+            font-weight: bold;
+            min-width: 30px;
+        }
+
+        /* Velocidade */
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .speed-control label {
+            font-size: 0.75rem;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <!-- Cabeçalho com controles -->
+    <header>
+        <h1>🔺 Fractal de Sierpinski — Recursividade</h1>
+        <div class="controls">
+            <label>Profundidade:</label>
+            <input type="range" id="depthSlider" min="0" max="6" value="3">
+            <span id="depthDisplay">3</span>
+
+            <div class="speed-control">
+                <label>Velocidade:</label>
+                <input type="range" id="speedSlider" min="1" max="10" value="5">
+            </div>
+
+            <button id="btnReiniciar">⟳ Reiniciar</button>
+            <button id="btnPausar">⏸ Pausar</button>
+        </div>
+    </header>
+
+    <!-- Layout principal -->
+    <div class="main-container">
+        <!-- Canvas do fractal -->
+        <div class="canvas-section">
+            <canvas id="fractalCanvas"></canvas>
+        </div>
+
+        <!-- Painéis de código -->
+        <div class="code-section">
+            <!-- Indicador de estado -->
+            <div class="state-indicator">
+                <div class="state-badge recursive" id="stateBadge">RECURSIVO</div>
+                <div class="call-counters">
+                    Chamadas ativas: <span id="activeCalls">0</span> |
+                    Total: <span id="totalCalls">0</span>
+                </div>
+            </div>
+
+            <div class="code-panels">
+                <!-- VisualG -->
+                <div class="code-column lang-visualg">
+                    <div class="lang-label">VisualG</div>
+                    <div class="code-content" id="codeVisualG"></div>
+                </div>
+
+                <!-- Python -->
+                <div class="code-column lang-python">
+                    <div class="lang-label">Python</div>
+                    <div class="code-content" id="codePython"></div>
+                </div>
+
+                <!-- JavaScript -->
+                <div class="code-column lang-javascript">
+                    <div class="lang-label">JavaScript</div>
+                    <div class="code-content" id="codeJS"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Painel educacional inferior -->
+    <div class="edu-panel">
+        <div class="edu-message" id="eduMessage">
+            Clique em <em>Reiniciar</em> para começar a animação do fractal.
+        </div>
+        <div class="stack-bar-container">
+            <span class="stack-bar-label">Pilha de chamadas:</span>
+            <div class="stack-bar">
+                <div class="stack-bar-fill" id="stackBarFill"></div>
+            </div>
+            <span class="stack-depth-value" id="stackDepthValue">0</span>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // Fractal de Sierpinski — Demonstração Interativa
+        // Código recursivo REAL em JavaScript
+        // ==========================================
+
+        // Elementos do DOM
+        const canvas = document.getElementById('fractalCanvas');
+        const ctx = canvas.getContext('2d');
+        const depthSlider = document.getElementById('depthSlider');
+        const depthDisplay = document.getElementById('depthDisplay');
+        const speedSlider = document.getElementById('speedSlider');
+        const btnReiniciar = document.getElementById('btnReiniciar');
+        const btnPausar = document.getElementById('btnPausar');
+        const stateBadge = document.getElementById('stateBadge');
+        const activeCalls = document.getElementById('activeCalls');
+        const totalCalls = document.getElementById('totalCalls');
+        const eduMessage = document.getElementById('eduMessage');
+        const stackBarFill = document.getElementById('stackBarFill');
+        const stackDepthValue = document.getElementById('stackDepthValue');
+
+        // Código-fonte para exibição nas três linguagens
+        const codigoVisualG = [
+            'procedimento sierpinski(n, x1, y1,',
+            '    x2, y2, x3, y3)',
+            'inicio',
+            '  se n = 0 entao',
+            '    desenharTriangulo(x1,y1,x2,y2,x3,y3)',
+            '  senao',
+            '    var mx12, my12, mx23, my23, mx31, my31',
+            '    mx12 <- (x1+x2)/2',
+            '    my12 <- (y1+y2)/2',
+            '    mx23 <- (x2+x3)/2',
+            '    my23 <- (y2+y3)/2',
+            '    mx31 <- (x3+x1)/2',
+            '    my31 <- (y3+y1)/2',
+            '    sierpinski(n-1, x1,y1, mx12,my12,',
+            '               mx31,my31)',
+            '    sierpinski(n-1, mx12,my12, x2,y2,',
+            '               mx23,my23)',
+            '    sierpinski(n-1, mx31,my31, mx23,my23,',
+            '               x3,y3)',
+            '  fimse',
+            'fimprocedimento'
+        ];
+
+        const codigoPython = [
+            'def sierpinski(n, p1, p2, p3):',
+            '    if n == 0:',
+            '        desenhar_triangulo(p1, p2, p3)',
+            '    else:',
+            '        m12 = ponto_medio(p1, p2)',
+            '        m23 = ponto_medio(p2, p3)',
+            '        m31 = ponto_medio(p3, p1)',
+            '        sierpinski(n-1, p1, m12, m31)',
+            '        sierpinski(n-1, m12, p2, m23)',
+            '        sierpinski(n-1, m31, m23, p3)',
+        ];
+
+        const codigoJS = [
+            'function sierpinski(n, p1, p2, p3) {',
+            '  if (n === 0) {',
+            '    desenharTriangulo(p1, p2, p3);',
+            '  } else {',
+            '    const m12 = pontoMedio(p1, p2);',
+            '    const m23 = pontoMedio(p2, p3);',
+            '    const m31 = pontoMedio(p3, p1);',
+            '    sierpinski(n-1, p1, m12, m31);',
+            '    sierpinski(n-1, m12, p2, m23);',
+            '    sierpinski(n-1, m31, m23, p3);',
+            '  }',
+            '}',
+        ];
+
+        // Mapeamento de linhas ativas por etapa da recursão
+        // Cada etapa mapeia para [linhaVisualG, linhaPython, linhaJS]
+        const linhaMap = {
+            'entrada':    [0, 0, 0],
+            'teste':      [3, 1, 1],
+            'casoBase':   [4, 2, 2],
+            'pontosMedios': [7, 4, 4],
+            'rec1':       [13, 7, 7],
+            'rec2':       [15, 8, 8],
+            'rec3':       [17, 9, 9],
+        };
+
+        // Cores por nível de profundidade
+        const coresPorNivel = [
+            '#2196F3', // nível 0 — azul
+            '#00BCD4', // nível 1 — ciano
+            '#4CAF50', // nível 2 — verde
+            '#FFEB3B', // nível 3 — amarelo
+            '#FF9800', // nível 4 — laranja
+            '#F44336', // nível 5 — vermelho
+            '#E91E63', // nível 6 — rosa
+        ];
+
+        // Estado da animação
+        let animando = false;
+        let pausado = false;
+        let cancelado = false;
+        let contadorTotal = 0;
+        let profundidadeAtual = 0;
+        let maxProfundidade = 3;
+        let chamadasAtivas = 0;
+
+        // Inicializar painéis de código
+        function inicializarCodigo() {
+            const containerVG = document.getElementById('codeVisualG');
+            const containerPY = document.getElementById('codePython');
+            const containerJS = document.getElementById('codeJS');
+
+            containerVG.innerHTML = codigoVisualG.map((linha, i) =>
+                `<div class="code-line" id="vg-${i}">${escapeHTML(linha)}</div>`
+            ).join('');
+
+            containerPY.innerHTML = codigoPython.map((linha, i) =>
+                `<div class="code-line" id="py-${i}">${escapeHTML(linha)}</div>`
+            ).join('');
+
+            containerJS.innerHTML = codigoJS.map((linha, i) =>
+                `<div class="code-line" id="js-${i}">${escapeHTML(linha)}</div>`
+            ).join('');
+        }
+
+        function escapeHTML(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // Destacar linha ativa nos painéis
+        function destacarLinha(etapa) {
+            // Limpar destaques anteriores
+            document.querySelectorAll('.code-line.active').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            if (!linhaMap[etapa]) return;
+
+            const [lVG, lPY, lJS] = linhaMap[etapa];
+
+            const elVG = document.getElementById(`vg-${lVG}`);
+            const elPY = document.getElementById(`py-${lPY}`);
+            const elJS = document.getElementById(`js-${lJS}`);
+
+            if (elVG) elVG.classList.add('active');
+            if (elPY) elPY.classList.add('active');
+            if (elJS) elJS.classList.add('active');
+        }
+
+        // Atualizar indicador de estado
+        function atualizarEstado(tipo, mensagem) {
+            if (tipo === 'base') {
+                stateBadge.textContent = 'CASO-BASE';
+                stateBadge.className = 'state-badge base-case';
+            } else {
+                stateBadge.textContent = 'RECURSIVO';
+                stateBadge.className = 'state-badge recursive';
+            }
+
+            eduMessage.innerHTML = mensagem;
+            activeCalls.textContent = chamadasAtivas;
+            totalCalls.textContent = contadorTotal;
+
+            // Atualizar barra de pilha
+            const porcentagem = maxProfundidade > 0
+                ? (profundidadeAtual / maxProfundidade) * 100
+                : 0;
+            stackBarFill.style.width = porcentagem + '%';
+            stackDepthValue.textContent = profundidadeAtual;
+        }
+
+        // Calcular delay baseado na velocidade
+        function getDelay() {
+            const vel = parseInt(speedSlider.value);
+            // Velocidade 1 = 800ms, velocidade 10 = 50ms
+            return Math.max(50, 850 - vel * 80);
+        }
+
+        // Promessa de espera com suporte a pausa e cancelamento
+        function esperar(ms) {
+            return new Promise(resolve => {
+                const verificar = () => {
+                    if (cancelado) {
+                        resolve();
+                        return;
+                    }
+                    if (pausado) {
+                        requestAnimationFrame(verificar);
+                        return;
+                    }
+                    setTimeout(resolve, ms);
+                };
+                verificar();
+            });
+        }
+
+        // Redimensionar canvas
+        function redimensionarCanvas() {
+            const section = canvas.parentElement;
+            canvas.width = section.clientWidth;
+            canvas.height = section.clientHeight;
+        }
+
+        // Desenhar um triângulo preenchido no canvas
+        function desenharTrianguloCanvas(p1, p2, p3, nivel) {
+            const cor = coresPorNivel[nivel % coresPorNivel.length];
+            ctx.beginPath();
+            ctx.moveTo(p1[0], p1[1]);
+            ctx.lineTo(p2[0], p2[1]);
+            ctx.lineTo(p3[0], p3[1]);
+            ctx.closePath();
+            ctx.fillStyle = cor;
+            ctx.globalAlpha = 0.85;
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+            ctx.strokeStyle = cor;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+        }
+
+        // Calcular ponto médio entre dois pontos
+        function pontoMedio(a, b) {
+            return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+        }
+
+        // ==========================================
+        // FUNÇÃO RECURSIVA REAL — Sierpinski animado
+        // Usa async/await para criar delay entre chamadas
+        // mas a estrutura é genuinamente recursiva
+        // ==========================================
+        async function sierpinski(n, p1, p2, p3, nivelOriginal) {
+            if (cancelado) return;
+
+            // Incrementar contadores
+            contadorTotal++;
+            chamadasAtivas++;
+            profundidadeAtual = nivelOriginal - n + 1;
+
+            // Destacar entrada na função
+            destacarLinha('entrada');
+            atualizarEstado('recursive',
+                `Chamando <em>sierpinski(${n})</em> — profundidade ${profundidadeAtual} da pilha`);
+            await esperar(getDelay() / 2);
+
+            if (cancelado) { chamadasAtivas--; return; }
+
+            // Teste condicional
+            destacarLinha('teste');
+            await esperar(getDelay() / 3);
+
+            if (cancelado) { chamadasAtivas--; return; }
+
+            if (n === 0) {
+                // CASO-BASE: desenhar o triângulo
+                destacarLinha('casoBase');
+                atualizarEstado('base',
+                    `Nível 0 atingido — <em>desenhando triângulo</em> — caso-base ✓`);
+                desenharTrianguloCanvas(p1, p2, p3, nivelOriginal);
+                await esperar(getDelay());
+            } else {
+                // PASSO RECURSIVO: calcular pontos médios e chamar recursivamente
+                destacarLinha('pontosMedios');
+                atualizarEstado('recursive',
+                    `Calculando pontos médios para nível ${n}`);
+                await esperar(getDelay() / 2);
+
+                if (cancelado) { chamadasAtivas--; return; }
+
+                const m12 = pontoMedio(p1, p2); // ponto médio lado 1-2
+                const m23 = pontoMedio(p2, p3); // ponto médio lado 2-3
+                const m31 = pontoMedio(p3, p1); // ponto médio lado 3-1
+
+                // Passo recursivo 1: triângulo superior
+                destacarLinha('rec1');
+                atualizarEstado('recursive',
+                    `Chamando <em>sierpinski(${n-1})</em> — passo recursivo 1 (triângulo superior)`);
+                await esperar(getDelay() / 3);
+                if (!cancelado) {
+                    await sierpinski(n - 1, p1, m12, m31, nivelOriginal);
+                }
+
+                if (cancelado) { chamadasAtivas--; return; }
+
+                // Passo recursivo 2: triângulo esquerdo inferior
+                destacarLinha('rec2');
+                atualizarEstado('recursive',
+                    `Chamando <em>sierpinski(${n-1})</em> — passo recursivo 2 (triângulo esquerdo)`);
+                await esperar(getDelay() / 3);
+                if (!cancelado) {
+                    await sierpinski(n - 1, m12, p2, m23, nivelOriginal);
+                }
+
+                if (cancelado) { chamadasAtivas--; return; }
+
+                // Passo recursivo 3: triângulo direito inferior
+                destacarLinha('rec3');
+                atualizarEstado('recursive',
+                    `Chamando <em>sierpinski(${n-1})</em> — passo recursivo 3 (triângulo direito)`);
+                await esperar(getDelay() / 3);
+                if (!cancelado) {
+                    await sierpinski(n - 1, m31, m23, p3, nivelOriginal);
+                }
+            }
+
+            chamadasAtivas--;
+            if (chamadasAtivas >= 0) {
+                profundidadeAtual = Math.max(0, profundidadeAtual - 1);
+                activeCalls.textContent = chamadasAtivas;
+                const porcentagem = maxProfundidade > 0
+                    ? (profundidadeAtual / maxProfundidade) * 100
+                    : 0;
+                stackBarFill.style.width = porcentagem + '%';
+                stackDepthValue.textContent = profundidadeAtual;
+            }
+        }
+
+        // Iniciar animação
+        async function iniciarAnimacao() {
+            if (animando) {
+                cancelado = true;
+                await new Promise(r => setTimeout(r, 100));
+            }
+
+            // Resetar estado
+            cancelado = false;
+            pausado = false;
+            animando = true;
+            contadorTotal = 0;
+            chamadasAtivas = 0;
+            profundidadeAtual = 0;
+            btnPausar.textContent = '⏸ Pausar';
+
+            // Redimensionar e limpar canvas
+            redimensionarCanvas();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Calcular pontos do triângulo principal
+            const margem = 30;
+            const largura = canvas.width - margem * 2;
+            const altura = canvas.height - margem * 2;
+            const lado = Math.min(largura, altura * 2 / Math.sqrt(3));
+            const alturaTriangulo = lado * Math.sqrt(3) / 2;
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+
+            // Vértices do triângulo equilátero
+            const p1 = [cx, cy - alturaTriangulo / 2 - 10];          // topo
+            const p2 = [cx - lado / 2, cy + alturaTriangulo / 2 - 10]; // esquerda
+            const p3 = [cx + lado / 2, cy + alturaTriangulo / 2 - 10]; // direita
+
+            maxProfundidade = parseInt(depthSlider.value);
+
+            atualizarEstado('recursive',
+                `Iniciando fractal de Sierpinski com profundidade <em>${maxProfundidade}</em>`);
+
+            // Chamada recursiva real
+            await sierpinski(maxProfundidade, p1, p2, p3, maxProfundidade);
+
+            if (!cancelado) {
+                animando = false;
+                destacarLinha(null);
+                atualizarEstado('base',
+                    `✅ Fractal completo! Total de <em>${contadorTotal}</em> chamadas recursivas realizadas.`);
+            }
+        }
+
+        // Event listeners
+        depthSlider.addEventListener('input', () => {
+            depthDisplay.textContent = depthSlider.value;
+        });
+
+        btnReiniciar.addEventListener('click', () => {
+            iniciarAnimacao();
+        });
+
+        btnPausar.addEventListener('click', () => {
+            if (!animando) return;
+            pausado = !pausado;
+            btnPausar.textContent = pausado ? '▶ Continuar' : '⏸ Pausar';
+
+            if (pausado) {
+                eduMessage.innerHTML += ' — <em>PAUSADO</em>';
+            }
+        });
+
+        // Redimensionar ao mudar tamanho da janela
+        window.addEventListener('resize', () => {
+            if (!animando) {
+                redimensionarCanvas();
+            }
+        });
+
+        // Inicialização
+        inicializarCodigo();
+        redimensionarCanvas();
+
+        // Desenhar triângulo de referência ao carregar
+        ctx.fillStyle = '#333';
+        ctx.font = '16px Segoe UI';
+        ctx.textAlign = 'center';
+        ctx.fillText('Clique em "Reiniciar" para iniciar a animação', canvas.width / 2, canvas.height / 2);
+    </script>
+</body>
+</html>
